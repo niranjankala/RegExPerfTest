@@ -47,17 +47,25 @@
     <Compile Include="CalculateRegexProcessingTime.cs" />
     <Compile Include="ErrorsService.cs" />
     <Compile Include="ErrorType.cs" />
+    <Compile Include="Extensions\Extensions.cs" />
+    <Compile Include="KBService.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Error.cs" />
+    <Compile Include="KBErrors.cs" />
+    <Compile Include="XMLHelper.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />
-    <None Include="Errors\SimulationErrors.xlsx" />
+    <None Include="Errors\Errors.xlsx">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
   </ItemGroup>
   <ItemGroup />
   <ItemGroup>
-    <Content Include="Errors\SimulationErrorsKB.xml" />
+    <Content Include="Errors\ErrorsKB.xml">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

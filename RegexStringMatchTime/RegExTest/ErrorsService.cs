@@ -11,9 +11,9 @@ namespace RegExTest
 {
     public class ErrorsService
     {
-        private List<Error> GetErrors(string errorsFilePath)
+        public List<Error> GetErrors(string errorsFilePath)
         {
-            List<Error> simulationErrorList = new List<Error>();
+            List<Error> errorsList = new List<Error>();
             try
             {
                 //string filepath = String.Empty;
@@ -57,7 +57,7 @@ namespace RegExTest
                         error.ErrorMessage = (error.ErrorMessage).Replace("\"", "");
                         error.ErrorCount = Convert.IsDBNull(itemRow["Count"]) ? 0 : Convert.ToInt32(itemRow["Count"]);
                         error.ErrorIndex = Convert.IsDBNull(itemRow["ErrorIndex"]) ? 0 : Convert.ToInt32(itemRow["ErrorIndex"]);
-                        simulationErrorList.Add(error);
+                        errorsList.Add(error);
                     }
 
                 }
@@ -70,6 +70,7 @@ namespace RegExTest
             {
 
             }
+            return errorsList;
         }
 
         /// <summary>
