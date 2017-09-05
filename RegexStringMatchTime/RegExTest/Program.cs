@@ -4,34 +4,29 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Windows.Forms;
 
 namespace RegExTest
 {
     class Program
     {
-        static void Main()
+        /// <summary>
+        /// 
+        /// </summary>
+        [STAThread]        
+        static void Main(string[] args)
         {
-            KBService service = new KBService();
-            CancellationTokenSource ctSource = new CancellationTokenSource();
-
             try
             {
-                Task<List<Error>> getReferencesTask = Task.Factory.StartNew<List<Error>>(() =>
-                       service.CreateErrorsResolutionData(ErrorType.All, ctSource.Token)
-                      , ctSource.Token);
-
-                getReferencesTask.Wait();
-                Console.ReadKey();
+                Application.EnableVisualStyles();
+                Application.SetCompatibleTextRenderingDefault(false);
+                Application.Run(new MainForm());
             }
-            catch (Exception ex)
+            catch (Exception e)
             {
-                
+                Console.WriteLine(e.ToString());                
+                Application.Exit();
             }
-            finally
-            {
-                
-            }
-           
         }
     }
 }

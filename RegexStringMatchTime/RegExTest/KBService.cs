@@ -13,7 +13,7 @@ namespace RegExTest
 {
     public class KBService
     {
-        
+
         public List<Error> CreateErrorsResolutionData(ErrorType processingErrorType, CancellationToken ctToken)
         {
             try
@@ -22,13 +22,17 @@ namespace RegExTest
                 if (ctToken.IsCancellationRequested)
                     ctToken.ThrowIfCancellationRequested();
                 List<Error> errors = new List<Error>();
-                
+
                 //Get Filterd Simulation Errors list
                 KBErrors errorsKB = GetFilteredKBErrors("EnergyPlus");
-
                 //Get Simulation Error
                 errors = errService.GetErrors(string.Format("{0}\\{1}", System.Windows.Forms.Application.StartupPath, "Errors\\Errors.xlsx"));
-                errors = ParseAndSetResolutionMessage(errors, errorsKB, processingErrorType, ctToken);
+
+                //reduce the KB Errors by matching errors initial characters
+                List<KBError> kbErrors = FilterKBList(errorsKB.KBErrorsList, errors);
+                //Make string Suitable  for Regex
+                ConvertKBErrorsToRegEx(kbErrors);
+                errors = ParseAndSetResolutionMessage(errors, kbErrors, processingErrorType, ctToken);
 
                 return errors;
             }
@@ -38,7 +42,8 @@ namespace RegExTest
             }
         }
 
-        private List<Error> ParseAndSetResolutionMessage(List<Error> errors, KBErrors errorsKB, ErrorType processingErrorType, CancellationToken ctToken)
+
+        private List<Error> ParseAndSetResolutionMessage(List<Error> errors, List<KBError> errorsKB, ErrorType processingErrorType, CancellationToken ctToken)
         {
 
             List<Error> distinctErrors = new List<Error>();
@@ -51,8 +56,8 @@ namespace RegExTest
 #endif
 
                 List<KBError> distinctKBErrors = new List<KBError>();
-                if (errorsKB.KBErrorsList.Count > 0)
-                    distinctKBErrors = errorsKB.KBErrorsList.GroupBy(kbErr => kbErr.ErrorMessage).Select(grp => grp.First()).ToList();
+                if (errorsKB.Count > 0)
+                    distinctKBErrors = errorsKB.GroupBy(kbErr => kbErr.ErrorMessage).Select(grp => grp.First()).ToList();
 
 #if DEBUG
                 System.Diagnostics.Stopwatch wt = new System.Diagnostics.Stopwatch();
@@ -115,7 +120,7 @@ namespace RegExTest
                 List<Error> warningErrors = errors.Where(kbErr => kbErr.ErrorType == ErrorType.Warning).ToList();
                 List<Error> fatalErrors = errors.Where(kbErr => kbErr.ErrorType == ErrorType.Fatal).ToList();
                 List<Error> severeErrors = errors.Where(kbErr => kbErr.ErrorType == ErrorType.Severe).ToList();
-                List<Error> cbeccErrors = errors.Where(kbErr => kbErr.ErrorType ==ErrorType.Error).ToList();
+                List<Error> cbeccErrors = errors.Where(kbErr => kbErr.ErrorType == ErrorType.Error).ToList();
 
 
                 Func<List<KBError>, List<Error>, List<Error>> FindDistinctErrorMessages = (filteredKBErros, filteredErros) =>
@@ -154,7 +159,7 @@ namespace RegExTest
                                         else
                                         {
                                             error = new Error();
-                                            error.ErrorMessage = errorResult.Value.First().ErrorMessage;                                         
+                                            error.ErrorMessage = errorResult.Value.First().ErrorMessage;
                                             error.Errors = errorResult.Value;
                                             error.ErrorType = errorResult.Value.First().ErrorType;
                                         }
@@ -188,7 +193,7 @@ namespace RegExTest
 
                 if (warningErrors.Count > 0 && (processingErrorType.HasFlag(ErrorType.Warning) || processingErrorType.Equals(ErrorType.All)))
                 {
-                    int equalCounts = warningErrors.Count < 10 ? 1 : warningErrors.Count / 10;
+                    int equalCounts = GetMaxCommonDivisor(warningErrors.Count);
                     foreach (IEnumerable<Error> subSet in warningErrors.Split(equalCounts))
                     {
                         tasks.Add(Task.Run<List<Error>>(() => FindDistinctErrorMessages(filteredWarningKBList, subSet.ToList()), CancellationToken.None));
@@ -197,7 +202,7 @@ namespace RegExTest
 
                 if (severeErrors.Count > 0 && (processingErrorType.HasFlag(ErrorType.Severe) || processingErrorType == ErrorType.All))
                 {
-                    int equalCounts = severeErrors.Count < 10 ? 1 : severeErrors.Count / 10;
+                    int equalCounts = GetMaxCommonDivisor(severeErrors.Count);
                     foreach (IEnumerable<Error> subSet in severeErrors.Split(equalCounts))
                     {
                         tasks.Add(Task.Run<List<Error>>(() => FindDistinctErrorMessages(filteredSevereKBList, subSet.ToList()), CancellationToken.None));
@@ -206,7 +211,7 @@ namespace RegExTest
 
                 if (fatalErrors.Count > 0 && (processingErrorType.HasFlag(ErrorType.Fatal) || processingErrorType.Equals(ErrorType.All)))
                 {
-                    int equalCounts = fatalErrors.Count < 10 ? 1 : fatalErrors.Count / 10;
+                    int equalCounts = GetMaxCommonDivisor(fatalErrors.Count);
                     foreach (IEnumerable<Error> subSet in fatalErrors.Split(equalCounts))
                     {
                         tasks.Add(Task.Run<List<Error>>(() => FindDistinctErrorMessages(filteredFatalKBList, subSet.ToList()), CancellationToken.None));
@@ -215,7 +220,7 @@ namespace RegExTest
 
                 if (cbeccErrors.Count > 0 && (processingErrorType.HasFlag(ErrorType.Error) || processingErrorType.Equals(ErrorType.All)))
                 {
-                    int equalCounts = cbeccErrors.Count < 10 ? 1 : cbeccErrors.Count / 10;
+                    int equalCounts = GetMaxCommonDivisor(cbeccErrors.Count);
                     foreach (IEnumerable<Error> subSet in cbeccErrors.Split(equalCounts))
                     {
                         tasks.Add(Task.Run<List<Error>>(() => FindDistinctErrorMessages(filteredcbeccErrorsKBList, subSet.ToList()), CancellationToken.None));
@@ -292,6 +297,27 @@ namespace RegExTest
 
         }
 
+        private int GetMaxCommonDivisor(int errorsCount)
+        {
+            int equalPartitions = 1;
+            if (errorsCount <= 10)
+            {
+                equalPartitions = 1;
+            }
+            else
+            {
+                for (int i = 10; i < errorsCount/2; i++)
+                {
+                    if (errorsCount / i < 5)
+                    {
+                        equalPartitions = errorsCount / i;
+                        break;
+                    }
+                }
+            }
+             return equalPartitions;
+        }
+
         /// <summary>
         /// Set resolution message in error and return resolution message
         /// </summary>
@@ -351,7 +377,7 @@ namespace RegExTest
             errorMessage = kbErrorInfo == null ? "Not Found" : string.IsNullOrWhiteSpace(kbErrorInfo.IssueResolution) ? "Not Found" : kbErrorInfo.IssueResolution;
             error.PossibleResolution = errorMessage;
             return errorMessage;
-        }        
+        }
 
         /// <summary>
         /// This method return KBErrors from KBErrorsKB.xml file
@@ -359,19 +385,19 @@ namespace RegExTest
         /// <param name="errorSourceType"></param>
         /// <returns></returns>
         private KBErrors GetFilteredKBErrors(string errorSourceType)
-        {            
+        {
             KBErrors errorsKB = GetErrorsKnowledgeBase();
             errorsKB.KBErrorsList = errorsKB.KBErrorsList.Where(err => err.SourceType.Equals(errorSourceType)).ToList();
             //Make string Suitable  for Regex
-            ConvertKBErrorsToRegEx(errorsKB);
+            //ConvertKBErrorsToRegEx(errorsKB);
             return errorsKB;
         }
 
-        private void ConvertKBErrorsToRegEx(KBErrors errosKB)
+        private void ConvertKBErrorsToRegEx(List<KBError> errosKB)
         {
-            for (int index = 0; index < errosKB.KBErrorsList.Count; index++)
+            for (int index = 0; index < errosKB.Count; index++)
             {
-                KBError kbErrorInfo = errosKB.KBErrorsList[index];
+                KBError kbErrorInfo = errosKB[index];
                 kbErrorInfo.ErrorMessage = CreateRegExFromKBError(kbErrorInfo.ErrorMessage);
             }
         }
@@ -393,8 +419,8 @@ namespace RegExTest
 
         public KBErrors GetErrorsKnowledgeBase()
         {
-            KBErrors kbErrors = XMLHelper.Deserialize<KBErrors>(File.ReadAllText(string.Format("{0}\\{1}", System.Windows.Forms.Application.StartupPath , "Errors\\ErrorsKB.xml")));
+            KBErrors kbErrors = XMLHelper.Deserialize<KBErrors>(File.ReadAllText(string.Format("{0}\\{1}", System.Windows.Forms.Application.StartupPath, "Errors\\ErrorsKB.xml")));
             return kbErrors;
-        }        
+        }
     }
 }
