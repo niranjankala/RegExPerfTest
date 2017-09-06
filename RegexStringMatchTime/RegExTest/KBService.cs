@@ -183,10 +183,10 @@ namespace RegExTest
 
 
                 //Filter the Warning KB List
-                List<KBError> filteredWarningKBList = FilterKBList(warningKBErrors, warningErrors);
-                List<KBError> filteredSevereKBList = FilterKBList(severeKBErrors, severeErrors);
-                List<KBError> filteredFatalKBList = FilterKBList(fatalKBErrors, fatalErrors);
-                List<KBError> filteredcbeccErrorsKBList = FilterKBList(cbeccErrorKBErrors, cbeccErrors);
+                List<KBError> filteredWarningKBList = warningKBErrors;
+                List<KBError> filteredSevereKBList = severeKBErrors;
+                List<KBError> filteredFatalKBList = fatalKBErrors;
+                List<KBError> filteredcbeccErrorsKBList = cbeccErrorKBErrors;
 
 
                 List<Task<List<Error>>> tasks = new List<Task<List<Error>>>();
@@ -306,7 +306,7 @@ namespace RegExTest
             }
             else
             {
-                for (int i = 10; i < errorsCount/2; i++)
+                for (int i = 10; i < errorsCount / 2; i++)
                 {
                     if (errorsCount / i < 5)
                     {
@@ -315,7 +315,7 @@ namespace RegExTest
                     }
                 }
             }
-             return equalPartitions;
+            return equalPartitions;
         }
 
         /// <summary>
@@ -326,40 +326,90 @@ namespace RegExTest
         /// <returns></returns>
         private List<KBError> FilterKBList(List<KBError> kbList, List<Error> errorList)
         {
-            int i = 0;
-            //string text=k
+            int i = 0;            
             List<KBError> filteredKBList = new List<KBError>();
-            foreach (var item in errorList)
+
+            //foreach (KBError kbErr in kbList)
+            //{
+            //    if (filteredKBList.Contains(kbErr))
+            //        continue;
+            //    string message = kbErr.ErrorMessage.Trim().Replace("**", "");
+            //    List<string> regExMsgParts = message.Split('*').ToList();
+            //    regExMsgParts.RemoveAll(str => !string.IsNullOrWhiteSpace(str));
+            //    IEnumerable<KBError> kbErrContainMsgPart = null;
+            //    //if(regExMsgParts.Count ==1)
+            //    //    kbErrContainMsgPart = kbList.Where(x => x.ErrorMessage.Contains(regExMsgParts[0])).ToList();
+            //    //else if (regExMsgParts.Count == 2)
+            //    //    kbErrContainMsgPart = kbList.Where(x => x.ErrorMessage.Contains(regExMsgParts[0]) && x.ErrorMessage.Contains(regExMsgParts[1])).ToList();
+            //    //else if (regExMsgParts.Count == 3)
+            //    kbErrContainMsgPart = kbList.Where(x => regExMsgParts.All(msgPart => x.ErrorMessage.Contains(msgPart)));
+
+
+            //    foreach (var item1 in kbErrContainMsgPart)
+            //    {
+            //        if (!filteredKBList.Contains(item1))
+            //        //if (!filteredKBList.Any(item=> item.ErrorMessage == item.ErrorMessage))
+            //        {
+            //            filteredKBList.Add(item1);
+
+            //        }
+            //    }
+
+            //}
+
+            Parallel.ForEach(kbList, (kbErr) =>
             {
-                //string text = kbList.Where(x => x.ErrorMessage.Contains("ProcessScheduleInput: Schedule:Constant=*,"));
-                foreach (var keyWord in item.ErrorMessage.Split(new char[0]))
+                if (!filteredKBList.Contains(kbErr))
                 {
-                    if (keyWord.Length > 4)
-                    {
-                        //string t = item.ErrorMessage.Split(new char[0])[0];
-                        var itemList = kbList.Where(x => x.ErrorMessage.Contains(keyWord)).ToList();
-                        foreach (var item1 in itemList)
-                        {
-                            if (!filteredKBList.Contains(item1))
-                            {
-                                filteredKBList.Add(item1);
 
-                            }
-                        }
-
-                        if (itemList.Count() > 0)
-                            i++;
-
-                        if (i == 3)
-                        {
-                            i = 0;
-                            break;
-                        }
-
-                    }
+                    string message = kbErr.ErrorMessage.Trim().Replace("**", "");
+                    List<string> regExMsgParts = message.Split('*').ToList();
+                    regExMsgParts.RemoveAll(str => string.IsNullOrWhiteSpace(str));
+                    
+                    //if(regExMsgParts.Count ==1)
+                    //    kbErrContainMsgPart = kbList.Where(x => x.ErrorMessage.Contains(regExMsgParts[0])).ToList();
+                    //else if (regExMsgParts.Count == 2)
+                    //    kbErrContainMsgPart = kbList.Where(x => x.ErrorMessage.Contains(regExMsgParts[0]) && x.ErrorMessage.Contains(regExMsgParts[1])).ToList();
+                    //else if (regExMsgParts.Count == 3)
+                     if(errorList.Any(x =>  regExMsgParts.All(msgPart => msgPart.Trim().Length>1 && x.ErrorMessage.Contains(msgPart))))
+                     {
+                         filteredKBList.Add(kbErr);
+                     }
                 }
+            });
 
-            }
+            //foreach (var item in errorList)
+            //{
+            //    //string text = kbList.Where(x => x.ErrorMessage.Contains("ProcessScheduleInput: Schedule:Constant=*,"));
+            //    string message = item.ErrorMessage.Trim().Replace("**", "");
+            //    foreach (var keyWord in message.Split('*'))
+            //    {
+            //        if (keyWord.Length > 4)
+            //        {
+            //            //string t = item.ErrorMessage.Split(new char[0])[0];
+            //            var itemList = kbList.Where(x => x.ErrorMessage.Contains(keyWord)).ToList();
+            //            foreach (var item1 in itemList)
+            //            {
+            //                if (!filteredKBList.Contains(item1))
+            //                {
+            //                    filteredKBList.Add(item1);
+
+            //                }
+            //            }
+
+            //            //if (itemList.Count() > 0)
+            //            //    i++;
+
+            //            if (i == 3)
+            //            {
+            //                i = 0;
+            //                break;
+            //            }
+
+            //        }
+            //    }
+
+            //}
 
             return filteredKBList;
         }
@@ -409,9 +459,14 @@ namespace RegExTest
             {
                 StringBuilder sbResult = new StringBuilder(Regex.Escape(kbErrorInfoMessage));
                 sbResult = sbResult.Replace("\\*]", "\\*\\]");
-                sbResult = sbResult.Replace("\\*", "[^$]*");
+                //sbResult = sbResult.Replace("\\*", "[^$]*");
+                sbResult = sbResult.Replace("\\*", ".*?");                
                 //"[^ ]*");
                 regExString = sbResult.ToString();
+                int indexLastPlaceHolder = regExString.LastIndexOf(".*?");
+                if (regExString.Length > 3 && indexLastPlaceHolder > 3 && indexLastPlaceHolder == regExString.Length - 3)
+                    regExString = regExString.Substring(0, regExString.Length -1 );
+
                 //regExString = regExString.StartsWith(".*") ? regExString : regExString.Insert(0, ".*");
             }
             return regExString;
