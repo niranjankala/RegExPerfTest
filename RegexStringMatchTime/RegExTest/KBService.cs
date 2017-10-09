@@ -26,8 +26,7 @@ namespace RegExTest
                 //Get Filterd Simulation Errors list
                 KBErrors errorsKB = GetFilteredKBErrors("EnergyPlus");
                 //Get Simulation Error
-                errors = errService.GetErrors(string.Format("{0}\\{1}", System.Windows.Forms.Application.StartupPath, "Errors\\Errors.xlsx"));
-
+                errors = GetErrors();
                 //reduce the KB Errors by matching errors initial characters
                 List<KBError> kbErrors = FilterKBList(errorsKB.KBErrorsList, errors);
                 //Make string Suitable  for Regex
@@ -40,6 +39,26 @@ namespace RegExTest
             {
                 throw;
             }
+        }
+
+        private List<Error> GetErrors()
+        {
+            List<Error> errors = new List<Error>();
+            ErrorsService errService = new ErrorsService();
+            errors = errService.GetErrors(string.Format("{0}\\{1}", System.Windows.Forms.Application.StartupPath, "Errors\\Errors.xlsx"));
+            foreach (Error error in errors.ToList())
+            {
+                if (!string.IsNullOrWhiteSpace(error.ErrorMessage))
+                {
+                    StringBuilder sbErrorFormatter = new StringBuilder(error.ErrorMessage);
+                    sbErrorFormatter.Replace(" ** Severe  ** ", "");
+                    sbErrorFormatter.Replace(" **  Fatal  ** ", "");
+                    sbErrorFormatter.Replace(" ** Warning ** ", "");
+                    error.ErrorMessage = sbErrorFormatter.ToString().Trim();
+                }
+                //simulationErrors.Add(error);
+            }
+            return errors;
         }
 
 
@@ -138,15 +157,33 @@ namespace RegExTest
                         () => new Dictionary<KBError, List<Error>>(),
                         (x, loopState, kpErrorResult) =>
                         {
-                            kpErrorResult.Add(filteredKBErros[(int)x], filteredErros
+#if DEBUG
+                            System.Diagnostics.Stopwatch individualPatternSW = new System.Diagnostics.Stopwatch();
+                            individualPatternSW.Start();
+#endif
+                            KBError kbError = filteredKBErros[(int)x];
+                            kpErrorResult.Add(kbError, filteredErros
                                 .Where(error => Regex.IsMatch(error.ErrorMessage,
-                                    filteredKBErros[(int)x].ErrorMessage, System.Text.RegularExpressions.RegexOptions.IgnorePatternWhitespace)).ToList());
+                                    kbError.ErrorMessage, System.Text.RegularExpressions.RegexOptions.IgnorePatternWhitespace)).ToList());
+#if DEBUG
+                            individualPatternSW.Stop();
+                            System.Diagnostics.Debug.WriteLine(string.Format("Pattern {0} => matching Completed in {1} seconds", kbError.ErrorMessage, individualPatternSW.Elapsed.TotalSeconds));
+#endif
                             return kpErrorResult;
                         },
                         (kpErrorResult) =>
                         {
                             lock (lockObject)
                             {
+#if DEBUG
+                                //if (kpErrorResult.Count > 0)
+                                //{
+                                //    foreach (KeyValuePair<KBError, List<Error>> errorResult in kpErrorResult)
+                                //    {
+                                //        System.Diagnostics.Debug.WriteLine(string.Format("Pattern-{0} matched {1} error messages", errorResult.Key.ErrorMessage, errorResult.Value.Count));
+                                //    }
+                                //}
+#endif
                                 foreach (KeyValuePair<KBError, List<Error>> errorResult in kpErrorResult)
                                 {
                                     if (errorResult.Value.Count > 0)
@@ -167,7 +204,7 @@ namespace RegExTest
                                         error.ErrorCode = errorResult.Key.ErrorCode;
                                         AddErrorResolutionMessage(error, errorResult.Key);
                                         error.ErrorMessagePattern = errorResult.Key.ErrorMessage;
-                                        errors.Add(error);
+                                        errorsList.Add(error);
                                         errorResult.Value.ForEach(err => errors.Remove(err));
                                     }
                                 }
@@ -177,7 +214,7 @@ namespace RegExTest
                     sw.Stop();
                     System.Diagnostics.Debug.WriteLine(string.Format("Completed in {0} seconds", sw.Elapsed.TotalSeconds));
 
-                    return errors.ToList();
+                    return errorsList.ToList();
 
                 };
 
@@ -326,94 +363,31 @@ namespace RegExTest
         /// <returns></returns>
         private List<KBError> FilterKBList(List<KBError> kbList, List<Error> errorList)
         {
-            int i = 0;            
             List<KBError> filteredKBList = new List<KBError>();
-
-            //foreach (KBError kbErr in kbList)
-            //{
-            //    if (filteredKBList.Contains(kbErr))
-            //        continue;
-            //    string message = kbErr.ErrorMessage.Trim().Replace("**", "");
-            //    List<string> regExMsgParts = message.Split('*').ToList();
-            //    regExMsgParts.RemoveAll(str => !string.IsNullOrWhiteSpace(str));
-            //    IEnumerable<KBError> kbErrContainMsgPart = null;
-            //    //if(regExMsgParts.Count ==1)
-            //    //    kbErrContainMsgPart = kbList.Where(x => x.ErrorMessage.Contains(regExMsgParts[0])).ToList();
-            //    //else if (regExMsgParts.Count == 2)
-            //    //    kbErrContainMsgPart = kbList.Where(x => x.ErrorMessage.Contains(regExMsgParts[0]) && x.ErrorMessage.Contains(regExMsgParts[1])).ToList();
-            //    //else if (regExMsgParts.Count == 3)
-            //    kbErrContainMsgPart = kbList.Where(x => regExMsgParts.All(msgPart => x.ErrorMessage.Contains(msgPart)));
-
-
-            //    foreach (var item1 in kbErrContainMsgPart)
-            //    {
-            //        if (!filteredKBList.Contains(item1))
-            //        //if (!filteredKBList.Any(item=> item.ErrorMessage == item.ErrorMessage))
-            //        {
-            //            filteredKBList.Add(item1);
-
-            //        }
-            //    }
-
-            //}
-
             Parallel.ForEach(kbList, (kbErr) =>
             {
                 if (!filteredKBList.Contains(kbErr))
                 {
-
-                    string message = kbErr.ErrorMessage.Trim().Replace("**", "");
+                    string message = Regex.Replace(kbErr.ErrorMessage.Trim(), @"\*\*+", @"*"); //kbErr.ErrorMessage.Trim().Replace("**", "*");
+                    message = Regex.Replace(message, "  +", " ");
                     List<string> regExMsgParts = message.Split('*').ToList();
-                    regExMsgParts.RemoveAll(str => string.IsNullOrWhiteSpace(str));
-                    
-                    //if(regExMsgParts.Count ==1)
-                    //    kbErrContainMsgPart = kbList.Where(x => x.ErrorMessage.Contains(regExMsgParts[0])).ToList();
-                    //else if (regExMsgParts.Count == 2)
-                    //    kbErrContainMsgPart = kbList.Where(x => x.ErrorMessage.Contains(regExMsgParts[0]) && x.ErrorMessage.Contains(regExMsgParts[1])).ToList();
-                    //else if (regExMsgParts.Count == 3)
-                     if(errorList.Any(x =>  regExMsgParts.All(msgPart => msgPart.Trim().Length>1 && x.ErrorMessage.Contains(msgPart))))
-                     {
-                         filteredKBList.Add(kbErr);
-                     }
+                    regExMsgParts.RemoveAll(str => string.IsNullOrWhiteSpace(str) || str.Trim().Length == 1);
+
+
+                    if (errorList.Any(x => MatchPatternWithSimulationError(x.ErrorMessage, regExMsgParts)))
+                    {
+                        filteredKBList.Add(kbErr);
+                    }
                 }
             });
-
-            //foreach (var item in errorList)
-            //{
-            //    //string text = kbList.Where(x => x.ErrorMessage.Contains("ProcessScheduleInput: Schedule:Constant=*,"));
-            //    string message = item.ErrorMessage.Trim().Replace("**", "");
-            //    foreach (var keyWord in message.Split('*'))
-            //    {
-            //        if (keyWord.Length > 4)
-            //        {
-            //            //string t = item.ErrorMessage.Split(new char[0])[0];
-            //            var itemList = kbList.Where(x => x.ErrorMessage.Contains(keyWord)).ToList();
-            //            foreach (var item1 in itemList)
-            //            {
-            //                if (!filteredKBList.Contains(item1))
-            //                {
-            //                    filteredKBList.Add(item1);
-
-            //                }
-            //            }
-
-            //            //if (itemList.Count() > 0)
-            //            //    i++;
-
-            //            if (i == 3)
-            //            {
-            //                i = 0;
-            //                break;
-            //            }
-
-            //        }
-            //    }
-
-            //}
-
             return filteredKBList;
         }
 
+        private bool MatchPatternWithSimulationError(string errorMessage, List<string> regExMsgParts)
+        {
+            errorMessage = Regex.Replace(errorMessage, "  +", " ");
+            return regExMsgParts.All(msgPart => msgPart.Trim().Length > 1 && errorMessage.Contains(msgPart.Trim()));
+        }
         /// <summary>
         /// Set resolution message in error and return resolution message
         /// </summary>
@@ -457,17 +431,25 @@ namespace RegExTest
             string regExString = kbErrorInfoMessage;
             if (!string.IsNullOrWhiteSpace(kbErrorInfoMessage))
             {
-                StringBuilder sbResult = new StringBuilder(Regex.Escape(kbErrorInfoMessage));
-                sbResult = sbResult.Replace("\\*]", "\\*\\]");
-                //sbResult = sbResult.Replace("\\*", "[^$]*");
-                sbResult = sbResult.Replace("\\*", ".*?");                
-                //"[^ ]*");
-                regExString = sbResult.ToString();
-                int indexLastPlaceHolder = regExString.LastIndexOf(".*?");
-                if (regExString.Length > 3 && indexLastPlaceHolder > 3 && indexLastPlaceHolder == regExString.Length - 3)
-                    regExString = regExString.Substring(0, regExString.Length -1 );
 
-                //regExString = regExString.StartsWith(".*") ? regExString : regExString.Insert(0, ".*");
+                StringBuilder sbResult = new StringBuilder(Regex.Escape(kbErrorInfoMessage));
+                sbResult.Replace("\\*]", "\\*\\]");
+                //sbResult.Replace("\\*", "[^$]*");
+                //sbResult.Replace("\\*", "[^ ]*"); //Not working if space found b/w variable section
+                sbResult.Replace("\\*", ".*?");
+
+                regExString = sbResult.ToString();
+                regExString = Regex.Replace(regExString, @"\\ \\ +", "\\s*?");
+                regExString = Regex.Replace(regExString, string.Format("({0})+", Regex.Escape(".*?")), ".*?");
+                regExString = Regex.Replace(regExString, string.Format("({0})+", Regex.Escape(".*?\\s*?")), ".*?");
+                regExString = Regex.Replace(regExString, string.Format("({0})+", Regex.Escape("\\s*?")), "\\s*?");
+
+
+                if (regExString.EndsWith(".*?"))
+                {
+                    regExString = regExString.Substring(0, regExString.Length - 1);
+                }
+                //regExString = regExString.StartsWith(".*?") ? regExString : regExString.Insert(0, ".*?");
             }
             return regExString;
         }

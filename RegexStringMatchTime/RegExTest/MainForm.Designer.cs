@@ -30,10 +30,12 @@
         {
             this.btnLoadResolutionMessages = new System.Windows.Forms.Button();
             this.panel1 = new System.Windows.Forms.Panel();
-            this.dataGridView1 = new System.Windows.Forms.DataGridView();
             this.lblStatus = new System.Windows.Forms.Label();
+            this.grdErrorsViewer = new DevExpress.XtraGrid.GridControl();
+            this.gridView1 = new DevExpress.XtraGrid.Views.Grid.GridView();
             this.panel1.SuspendLayout();
-            ((System.ComponentModel.ISupportInitialize)(this.dataGridView1)).BeginInit();
+            ((System.ComponentModel.ISupportInitialize)(this.grdErrorsViewer)).BeginInit();
+            ((System.ComponentModel.ISupportInitialize)(this.gridView1)).BeginInit();
             this.SuspendLayout();
             // 
             // btnLoadResolutionMessages
@@ -58,15 +60,6 @@
             this.panel1.Size = new System.Drawing.Size(284, 31);
             this.panel1.TabIndex = 1;
             // 
-            // dataGridView1
-            // 
-            this.dataGridView1.ColumnHeadersHeightSizeMode = System.Windows.Forms.DataGridViewColumnHeadersHeightSizeMode.AutoSize;
-            this.dataGridView1.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.dataGridView1.Location = new System.Drawing.Point(0, 0);
-            this.dataGridView1.Name = "dataGridView1";
-            this.dataGridView1.Size = new System.Drawing.Size(284, 230);
-            this.dataGridView1.TabIndex = 2;
-            // 
             // lblStatus
             // 
             this.lblStatus.AutoSize = true;
@@ -75,18 +68,35 @@
             this.lblStatus.Size = new System.Drawing.Size(0, 13);
             this.lblStatus.TabIndex = 1;
             // 
+            // grdErrorsViewer
+            // 
+            this.grdErrorsViewer.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.grdErrorsViewer.Location = new System.Drawing.Point(0, 0);
+            this.grdErrorsViewer.MainView = this.gridView1;
+            this.grdErrorsViewer.Name = "grdErrorsViewer";
+            this.grdErrorsViewer.Size = new System.Drawing.Size(284, 230);
+            this.grdErrorsViewer.TabIndex = 2;
+            this.grdErrorsViewer.ViewCollection.AddRange(new DevExpress.XtraGrid.Views.Base.BaseView[] {
+            this.gridView1});
+            // 
+            // gridView1
+            // 
+            this.gridView1.GridControl = this.grdErrorsViewer;
+            this.gridView1.Name = "gridView1";
+            // 
             // MainForm
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(284, 261);
-            this.Controls.Add(this.dataGridView1);
+            this.Controls.Add(this.grdErrorsViewer);
             this.Controls.Add(this.panel1);
             this.Name = "MainForm";
             this.Text = "MainForm";
             this.panel1.ResumeLayout(false);
             this.panel1.PerformLayout();
-            ((System.ComponentModel.ISupportInitialize)(this.dataGridView1)).EndInit();
+            ((System.ComponentModel.ISupportInitialize)(this.grdErrorsViewer)).EndInit();
+            ((System.ComponentModel.ISupportInitialize)(this.gridView1)).EndInit();
             this.ResumeLayout(false);
 
         }
@@ -95,8 +105,9 @@
 
         private System.Windows.Forms.Button btnLoadResolutionMessages;
         private System.Windows.Forms.Panel panel1;
-        private System.Windows.Forms.DataGridView dataGridView1;
         private System.Windows.Forms.Label lblStatus;
+        private DevExpress.XtraGrid.GridControl grdErrorsViewer;
+        private DevExpress.XtraGrid.Views.Grid.GridView gridView1;
 
     }
 }

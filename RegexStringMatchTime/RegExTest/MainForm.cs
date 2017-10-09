@@ -32,7 +32,7 @@ namespace RegExTest
                         return service.CreateErrorsResolutionData(ErrorType.All, ctSource.Token);
                     }, ctSource.Token);
 
-                dataGridView1.DataSource = parsedErrors;
+                grdErrorsViewer.DataSource = parsedErrors;
             }
             catch (Exception ex)
             {
